@@ -21,7 +21,7 @@ public class User {
 
     private String firstName;
 
-    private String LastName;
+    private String lastName;
 
     @Column(unique = true)
     private String document;
@@ -36,13 +36,15 @@ public class User {
     @Enumerated(EnumType.STRING)
     private UserType userType;
 
-    public void transfer(BigDecimal value) {
-        this.balance.subtract(value);
+    public String getFullName() {
+        return this.firstName + " " + this.lastName;
     }
 
-    public void deposit(BigDecimal value) {
-        this.balance.add(value);
+    public void tranferir(BigDecimal valor) {
+        this.balance = this.balance.subtract(valor);
     }
 
-
+    public void depositar(BigDecimal valor) {
+        this.balance = this.balance.add(valor);
+    }
 }
