@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Table(name = "transactions")
 @Entity(name = "transactions")
@@ -19,15 +19,23 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private BigDecimal value;
+    private BigDecimal amount;
 
     @ManyToOne
     @JoinColumn(name = "sender_id")
-    private User sender;
+    private Usuario sender;
 
     @ManyToOne
     @JoinColumn(name = "receiver_id")
-    private User receiver;
+    private Usuario receiver;
 
-    private LocalDate localDate;
+    private LocalDateTime localDate;
+
+    public Transaction(BigDecimal value, Usuario userSender, Usuario userReciever, LocalDateTime dateTime) {
+        this.id = this.getId();
+        this.amount = value;
+        this.sender = userSender;
+        this.receiver = userReciever;
+        this.localDate = dateTime;
+    }
 }

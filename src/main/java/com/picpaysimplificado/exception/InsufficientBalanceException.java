@@ -1,2 +1,7 @@
-package com.picpaysimplificado.exception;public class InsufficientBalanceException {
+package com.picpaysimplificado.exception;
+
+public class InsufficientBalanceException extends RuntimeException {
+    public InsufficientBalanceException(String message) {
+        super(message);
+    }
 }

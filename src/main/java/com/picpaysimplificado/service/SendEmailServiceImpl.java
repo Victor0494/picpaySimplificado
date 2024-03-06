@@ -1,29 +1,35 @@
 package com.picpaysimplificado.service;
 
-import com.picpaysimplificado.client.ExternalApiClient;
+import com.picpaysimplificado.constant.ErrorCodes;
+import com.picpaysimplificado.dto.NotificationRequestDTO;
+import com.picpaysimplificado.exception.EmailNotificationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
+import static org.springframework.http.HttpStatus.OK;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class SendEmailServiceImpl {
 
-    private final static String MESSAGE_URI = "https://run.mocky.io/v3/54dc2cf1-3add-45b5-b5a9-6bf7e7f1f4a6";
+    private final RestTemplate restTemplate;
 
-    private final ExternalApiClient client;
 
-    public SendEmailServiceImpl(ExternalApiClient client) {
-        this.client = client;
-    }
-
-    public void sendEmail() {
-
+    public void sendEmail(String email, String message) {
+        NotificationRequestDTO notificationRequest = new NotificationRequestDTO(email, message);
+        ResponseEntity<String> response;
         try {
-            client.authorizationAPI(MESSAGE_URI);
-        } catch (IOException | InterruptedException e) {
-            log.error("SendEmailServiceImpl.sendEmail - Error sending the e-mail ");
+            response = restTemplate.postForEntity(System.getenv("MESSAGE_URI"), notificationRequest, String.class);
+        } catch (EmailNotificationException exception) {
+            throw new EmailNotificationException(ErrorCodes.ERRO_SEND_EMAIL.getMessage());
+
+        }
+        if(!OK.equals(response.getStatusCode())) {
+            System.out.println("Erro ao enviar mensagem de notificação");
         }
     }
 }

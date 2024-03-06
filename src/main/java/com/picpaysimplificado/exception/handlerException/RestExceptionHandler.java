@@ -1,6 +1,7 @@
-package com.picpaysimplificado.exception;
+package com.picpaysimplificado.exception.handlerException;
 
 import com.picpaysimplificado.constant.ErrorCodes;
+import com.picpaysimplificado.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -37,5 +38,12 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
         ExceptionResponse response = new ExceptionResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(EmailNotificationException.class)
+    public ResponseEntity<Object> handleEmailNotificationException(EmailNotificationException ex) {
+        ExceptionResponse response = new ExceptionResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

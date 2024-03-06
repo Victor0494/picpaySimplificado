@@ -4,10 +4,6 @@ spring:
     username: root
     password: darskull1
     driverClassName: com.mysql.cj.jdbc.Driver
-    initialization-mode: always
-  sql:
-    init:
-      mode: always
   jpa:
     database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:

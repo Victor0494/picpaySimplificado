@@ -1,82 +1,63 @@
 package com.picpaysimplificado.service;
 
 import com.picpaysimplificado.client.ExternalApiClient;
+import com.picpaysimplificado.constant.ErrorCodes;
 import com.picpaysimplificado.constant.UserType;
-import com.picpaysimplificado.dto.TransferPayloadDTO;
-import com.picpaysimplificado.entities.Transaction;
-import com.picpaysimplificado.entities.User;
-import com.picpaysimplificado.exception.InvalidValidationException;
-import com.picpaysimplificado.repository.TransactionRepository;
+import com.picpaysimplificado.converter.UserCreateDTOToUserEntityConverter;
+import com.picpaysimplificado.dto.UserCreateDTO;
+import com.picpaysimplificado.entities.Usuario;
+import com.picpaysimplificado.exception.InsufficientBalanceException;
+import com.picpaysimplificado.exception.InvalidUserTypeException;
+import com.picpaysimplificado.exception.UserNotAuthorizedException;
 import com.picpaysimplificado.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Optional;
+import java.util.List;
+import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl {
-
-    private final static String EXTERNAL_API_URI = "https://run.mocky.io/v3/5794d450-d2e2-4412-8131-73d0293ac1cc";
 
     private final UserRepository userRepository;
 
-    private final TransactionRepository transactionRepository;
-
-    private final SendEmailServiceImpl sendEmailService;
-
     private final ExternalApiClient client;
 
-    public UserServiceImpl(UserRepository userRepository, TransactionRepository transactionRepository, SendEmailServiceImpl sendEmailService, ExternalApiClient client) {
-        this.userRepository = userRepository;
-        this.transactionRepository = transactionRepository;
-        this.sendEmailService = sendEmailService;
-        this.client = client;
+    private final UserCreateDTOToUserEntityConverter converter;
+
+    public void validateUserInfo(Usuario userSender, BigDecimal transferPayloadValue) {
+        validateUser(userSender, transferPayloadValue);
+        validateUserAuthorization();
     }
 
-
-    public void transfer(TransferPayloadDTO transferPayload) {
-        Optional<User> reciever = userRepository.findByDocument(transferPayload.receiverDocument());
-        Optional<User> sender = userRepository.findByDocument(transferPayload.senderDocument());
-
-        if (reciever.isEmpty() || sender.isEmpty()) {
-            throw new InvalidValidationException("User not found");
-        }
-        User userSender = sender.get();
-        User userReciever = reciever.get();
-
-        validateUser(sender.get(), transferPayload.value());
-        validateExternalAPI();
-
-        userSender.transfer(transferPayload.value());
-        userReciever.deposit(transferPayload.value());
-
-        sendEmailService.sendEmail();
-
-        transactionRepository.save(new Transaction(1L, transferPayload.value(), userSender, userReciever, LocalDate.now()));
-
-    }
-
-    private void validateExternalAPI() {
-        try {
-            var response = client.authorizationAPI(EXTERNAL_API_URI);
-            if (!response.body().contains("Authorized")) {
-                throw new InvalidValidationException("User not authorized");
+    private void validateUserAuthorization() {
+        ResponseEntity<Map> response = client.authorizationAPI(System.getenv("AUTHORIZED_URI"));
+        if(response.hasBody()) {
+            if (!response.getStatusCode().equals(HttpStatus.OK) || !response.getBody().get("message").equals("Autorizado")) {
+                throw new UserNotAuthorizedException("User not authorized");
             }
-
-        } catch (IOException | InterruptedException e) {
-            throw new InvalidValidationException(e.getMessage());
         }
     }
 
-    private void validateUser(User userSender, BigDecimal transferPayload) {
+    private void validateUser(Usuario userSender, BigDecimal transferPayload) {
         if (userSender.getUserType().equals(UserType.MERCHANT)) {
-            throw new InvalidValidationException("Invalid UserType");
+            throw new InvalidUserTypeException(ErrorCodes.INVALID_USER_TYPE.getMessage());
         }
 
-        if (userSender.getBalance().compareTo(transferPayload) == -1) {
-            throw new InvalidValidationException("The balance is insufficient");
+        if (userSender.getBalance().compareTo(transferPayload) < 0) {
+            throw new InsufficientBalanceException(ErrorCodes.INSUFFICIENT_BALANCE.getMessage());
         }
+    }
+
+    public void createUser(UserCreateDTO userCreateDTO) {
+        userRepository.save(converter.toUserEntity(userCreateDTO));
+    }
+
+    public List<Usuario> getAllUsers() {
+        return userRepository.findAll();
     }
 }
